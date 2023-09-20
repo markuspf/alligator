@@ -1,13 +1,7 @@
 use rocksdb::{
-    BlockBasedIndexType, BlockBasedOptions, ColumnFamilyDescriptor, IteratorMode, Options,
-    ReadOptions, SliceTransform, TransactionDB, TransactionDBOptions, TransactionOptions,
+    BlockBasedIndexType, BlockBasedOptions, ColumnFamilyDescriptor, Error, IteratorMode, Options,
+    ReadOptions, SliceTransform, TransactionDB, TransactionDBOptions,
 };
-
-pub mod ArangoRocks {
-    pub fn foo() -> i64 {
-        5
-    }
-}
 
 enum ArangoRocksDBColumnFamily {
     Definitions(ColumnFamilyDescriptor),
@@ -67,9 +61,10 @@ impl ArangoRocksDBColumnFamily {
         opts.set_prefix_extractor(SliceTransform::create_fixed_prefix(std::mem::size_of::<
             usize,
         >()));
-        opts.set_comparator("RocksDBVPackComparator", |x: &[u8], u: &[u8]| {
-            std::cmp::Ordering::Equal
-        });
+        opts.set_comparator(
+            "RocksDBVPackComparator",
+            Box::new(|x: &[u8], u: &[u8]| std::cmp::Ordering::Equal),
+        );
 
         let mut tableopts = BlockBasedOptions::default();
         // tableopgs reset filter opts
@@ -142,7 +137,7 @@ void dump_colllist(rocksdb::TransactionDB* db, std::string const& outfile) {
 }
 */
 
-fn dump_collection_list(db: &TransactionDB) -> () {
+pub(crate) fn get_collection_list(db: &TransactionDB) -> Vec<String> {
     let cf_handle = db.cf_handle("Documents").unwrap();
     let mut ropts = ReadOptions::default();
     ropts.set_verify_checksums(false);
@@ -155,11 +150,10 @@ fn dump_collection_list(db: &TransactionDB) -> () {
         let (key, value) = item.unwrap();
         println!("key: {:?} value: {:?}", key, value);
     }
+    vec![]
 }
 
-/*
-fn main() -> () {
-    let path = "/home/makx/scratch/bananas/engine-rocksdb";
+pub(crate) fn open_arangodb_database(path: String) -> Result<TransactionDB, Error> {
     let mut cf_opts = Options::default();
     cf_opts.set_max_write_buffer_number(16);
     let cfs: Vec<ColumnFamilyDescriptor> = vec![
@@ -178,13 +172,6 @@ fn main() -> () {
     db_opts.create_missing_column_families(false);
     db_opts.create_if_missing(false);
     let mut txdb_opts = TransactionDBOptions::default();
-    {
-        let db = TransactionDB::open_cf_descriptors(&db_opts, &txdb_opts, path, cfs).unwrap();
-        dump_collection_list(&db);
-    }
-    //    let _ = DB::destroy(&db_opts, path);
 
-    println!("Foo blo");
-    println!("Hello world");
+    TransactionDB::open_cf_descriptors(&db_opts, &txdb_opts, path, cfs)
 }
-*/

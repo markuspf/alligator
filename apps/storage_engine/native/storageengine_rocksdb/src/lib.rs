@@ -3,13 +3,14 @@ use rustler::{Env, NifStruct, Term};
 use rustler::resource::ResourceArc;
 
 // use ArangoRocks;
-use rocksdb::DB;
+use rocksdb::TransactionDB;
+
+mod arangodb;
 
 pub struct MyDB {
     pub path: String,
-    pub db: DB,
+    pub db: TransactionDB,
 }
-
 
 #[derive(NifStruct)]
 #[module = "StorageEngine.RocksDB"]
@@ -18,42 +19,25 @@ struct DBResource {
 }
 
 #[rustler::nif]
-fn open(path : String) -> DBResource {
-   let db = DB::open_default(path.clone()).unwrap();
-
-    db.put(b"my key", b"my value").unwrap();
-   match db.get(b"my key") {
-       Ok(Some(value)) => println!("retrieved value {}", String::from_utf8(value).unwrap()),
-       Ok(None) => println!("value not found"),
-       Err(e) => println!("operational problem encountered: {}", e),
-   }
-   db.delete(b"my key").unwrap();
-
+fn open(path: String) -> DBResource {
+    let db = arangodb::open_arangodb_database(path.clone()).unwrap();
 
     DBResource {
         reference: ResourceArc::new(MyDB {
             path: path.clone(),
-            db: db         })
+            db: db,
+        }),
     }
 }
 
 #[rustler::nif]
-fn get_path(res : DBResource) -> String {
+fn get_collection_list(res: DBResource) -> Vec<String> {
+    arangodb::get_collection_list(&res.reference.db)
+}
+
+#[rustler::nif]
+fn get_path(res: DBResource) -> String {
     res.reference.path.clone()
-}
-
-#[rustler::nif]
-fn put(res: DBResource, key: String, value: String) -> () {
-    res.reference.db.put(key, value).unwrap();
-}
-
-#[rustler::nif]
-fn get(res: DBResource, key: String) -> Result<String, String> {
-    match res.reference.db.get(key) {
-        Ok(Some(value)) => Ok(String::from_utf8(value).unwrap()),
-        Ok(None) => Err("not found".to_string()),
-        Err(e) => Err("penis".to_string())
-    }
 }
 
 fn load(env: Env, _: Term) -> bool {
@@ -61,4 +45,8 @@ fn load(env: Env, _: Term) -> bool {
     true
 }
 
-rustler::init!("Elixir.StorageEngine.RocksDB", [open, get_path, put, get], load = load);
+rustler::init!(
+    "Elixir.StorageEngine.RocksDB",
+    [open, get_path, put, get, get_collection_list],
+    load = load
+);
