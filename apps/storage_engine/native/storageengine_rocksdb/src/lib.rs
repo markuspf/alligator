@@ -6,6 +6,7 @@ use rustler::resource::ResourceArc;
 use rocksdb::TransactionDB;
 
 mod arangodb;
+mod brangodb;
 
 pub struct MyDB {
     pub path: String,
@@ -47,6 +48,6 @@ fn load(env: Env, _: Term) -> bool {
 
 rustler::init!(
     "Elixir.StorageEngine.RocksDB",
-    [open, get_path, put, get, get_collection_list],
+    [open, get_path, get_collection_list],
     load = load
 );
