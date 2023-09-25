@@ -32,95 +32,79 @@ defmodule StorageEngine.RocksDB.ColumnFamilies.Definitions do
   };
   """
 
-  def parse_entry(<<0, _rest::binary>>) do
-    IO.puts("placeholder")
+  def parse_entry({<<0, _rest::binary>>, _vpack}) do
   end
 
-  def parse_entry(<<"0", database_id::64>>) do
-    IO.puts("type: Database, database_id #{database_id}")
+  def parse_entry({<<"0", _database_id::64>>, vpack}) do
+    spec = VelocyPack.decode!(vpack)
+    %ArangoDB.Database{spec: spec}
   end
 
-  def parse_entry(<<"1", database_id::64, collection_id::64>>) do
-    IO.puts("type: Collection, database_id: #{database_id}, collection_id: #{collection_id}")
+  def parse_entry({<<"1", database_id::64, _collection_id::64>>, vpack}) do
+    spec = VelocyPack.decode!(vpack)
+    %ArangoDB.Collection{database_id: database_id, spec: spec}
   end
 
   def parse_entry(<<"2", id, _rest::binary>>) do
-    IO.puts("type: Countervalue, id #{id}")
   end
 
-  def parse_entry(<<"3", id, _rest::binary>>) do
-    IO.puts("type: Document, id #{id}")
+  def parse_entry({<<"3", id, _rest::binary>>, vpack}) do
+    spec = VelocyPack.decode!(vpack)
+    %ArangoDB.Document{spec: spec}
   end
 
   def parse_entry(<<"4", id, _rest::binary>>) do
-    IO.puts("type: PrimaryIndexValue, id #{id}")
   end
 
   def parse_entry(<<"5", id, _rest::binary>>) do
-    IO.puts("type: EdgeIndexValue, id #{id}")
   end
 
   def parse_entry(<<"6", id, _rest::binary>>) do
-    IO.puts("type: VPackIndexValue, id #{id}")
   end
 
   def parse_entry(<<"7", id, _rest::binary>>) do
-    IO.puts("type: UniqueVPackIndexValue, id #{id}")
   end
 
   def parse_entry(<<"8", id, _rest::binary>>) do
-    IO.puts("type: SettingsValue, id #{id}")
   end
 
   def parse_entry(<<"9", id, _rest::binary>>) do
-    IO.puts("type: ReplicationApplierConfig, id #{id}")
   end
 
   def parse_entry(<<":", id, _rest::binary>>) do
-    IO.puts("type: FulltextIndexValue, id #{id}")
   end
 
   def parse_entry(<<";", id, _rest::binary>>) do
-    IO.puts("type: LegacyGeoIndexValue, id #{id}")
   end
 
   def parse_entry(<<"<", id, _rest::binary>>) do
-    IO.puts("type: IndexEstimateValue, id #{id}")
   end
 
   def parse_entry(<<"=", id, _rest::binary>>) do
-    IO.puts("type: KeyGeneratorValue, id #{id}")
   end
 
   def parse_entry(<<">", id, _rest::binary>>) do
-    IO.puts("type: View, id #{id}")
   end
 
   def parse_entry(<<"?", id, _rest::binary>>) do
-    IO.puts("type: GeoIndexValue, id #{id}")
   end
 
   def parse_entry(<<"L", id, _rest::binary>>) do
-    IO.puts("type: LogEntry, id #{id}")
   end
 
   def parse_entry(<<"*", id, _rest::binary>>) do
-    IO.puts("type: RevisionTreeValue, id #{id}")
   end
 
   def parse_entry(<<"s", id, _rest::binary>>) do
-    IO.puts("type: ReplicatedState, id #{id}")
   end
 
   def parse_entry(<<"z", id, _rest::binary>>) do
-    IO.puts("type: ZkdIndexValue, id #{id}")
   end
 
   def parse_entry(<<"Z", id, _rest::binary>>) do
-    IO.puts("type: UniqueZkdIndexValue, id #{id}")
   end
 
-  def parse_entry(<<t, _rest::binary>>) do
-    IO.puts("unsupported type byte: #{t}")
+  def parse_entry({<<t, _rest::binary>>, vpack}) do
+    VelocyPack.decode(vpack)
   end
 end

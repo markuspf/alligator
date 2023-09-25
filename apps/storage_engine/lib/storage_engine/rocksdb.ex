@@ -8,10 +8,38 @@ defmodule StorageEngine.RocksDB do
   def get_path(_db), do: error()
   def get_column_family(_db, _name), do: error()
 
-  def test() do
-    se = open("/home/makx/databases/analytics-6-b/engine-rocksdb")
-    cf = get_column_family(se, "default")
-    {se, cf}
+  def open_test_db() do
+    open("/home/makx/databases/analytics-6-b/engine-rocksdb")
+  end
+
+  def read_definitions(%StorageEngine.RocksDB{} = db) do
+    get_column_family(db, "default")
+    |> Enum.map(&StorageEngine.RocksDB.ColumnFamilies.Definitions.parse_entry/1)
+  end
+
+  def databases(defs) do
+    defs
+    |> Enum.filter(fn v ->
+      case v do
+        %ArangoDB.Database{} -> true
+        _ -> false
+      end
+    end)
+  end
+
+  def collections(defs) do
+    defs
+    |> Enum.filter(fn v ->
+      case v do
+        %ArangoDB.Collection{} -> true
+        _ -> false
+      end
+    end)
+  end
+
+  def list_collection_names(cff) do
+    cff
+    |> Enum.map(&ArangoDB.Collection.name/1)
   end
 
   defp error() do
