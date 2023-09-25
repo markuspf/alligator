@@ -1,16 +1,16 @@
-use rustler::{Env, NifStruct, Term};
+use rustler::{Binary, NewBinary, OwnedBinary, Env, NifResult, NifStruct, Term};
 
 use rustler::resource::ResourceArc;
 
 // use ArangoRocks;
-use rocksdb::TransactionDB;
+use rocksdb::DB;
 
 mod arangodb;
 mod brangodb;
 
 pub struct MyDB {
     pub path: String,
-    pub db: TransactionDB,
+    pub db: DB,
 }
 
 #[derive(NifStruct)]
@@ -32,8 +32,26 @@ fn open(path: String) -> DBResource {
 }
 
 #[rustler::nif]
-fn get_collection_list(res: DBResource) -> Vec<String> {
-    arangodb::get_collection_list(&res.reference.db)
+fn close(res: DBResource) -> Result<(), ()> {
+    Err(())
+}
+
+#[rustler::nif]
+fn get_column_family<'a>(env: Env<'a>, res: DBResource, name: String) -> NifResult<Vec<(Binary<'a>, Binary<'a>)>> {
+    let vals = arangodb::get_column_family(&res.reference.db, name);
+
+    let mut r : Vec<(Binary<'a>, Binary<'a>)> = vec! [];
+
+    for v in vals {
+        let mut key = NewBinary::new(env, v.0.len());
+        key.copy_from_slice(&v.0);
+        let mut value = NewBinary::new(env, v.1.len());
+        value.copy_from_slice(&v.1);
+        r.push((key.into(), value.into()))
+    }
+    // The imaginary API call presumedly filled in our binary with meaningful
+    // data, so let's return it.
+    Ok(r)
 }
 
 #[rustler::nif]
@@ -48,6 +66,6 @@ fn load(env: Env, _: Term) -> bool {
 
 rustler::init!(
     "Elixir.StorageEngine.RocksDB",
-    [open, get_path, get_collection_list],
+    [open, get_path, get_column_family],
     load = load
 );

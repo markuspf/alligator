@@ -1,6 +1,6 @@
 use rocksdb::{
     BlockBasedIndexType, BlockBasedOptions, ColumnFamilyDescriptor, Error, IteratorMode, Options,
-    ReadOptions, SliceTransform, TransactionDB, TransactionDBOptions,
+    ReadOptions, SliceTransform, TransactionDB, DB,
 };
 
 enum ArangoRocksDBColumnFamily {
@@ -105,55 +105,25 @@ impl ArangoRocksDBColumnFamily {
         ColumnFamilyDescriptor::new("ZkdIndex", opts)
     }
 }
-/*
-void dump_colllist(rocksdb::TransactionDB* db, std::string const& outfile) {
-  rocksdb::WriteOptions opts;
-  rocksdb::TransactionOptions topts;
-  rocksdb::Transaction* trx = db->BeginTransaction(opts, topts);
-  rocksdb::ReadOptions ropts;
-  ropts.verify_checksums = false;
-  ropts.fill_cache = false;
-  std::ofstream out(outfile.c_str(), std::ios::out);
-  out << "Dumping collection list directly from documents family:\n";
-  std::string startKey;
-  rocksdb::Slice start;
-  rocksdb::Iterator* it =
-      trx->GetIterator(ropts, cfHandles[(size_t)Family::Documents]);
-  it->Seek(start);
-  std::string line1;
-  while (it->Valid()) {
-    rocksdb::Slice key = it->key();
-    uint64_t id;
-    memcpy(&id, key.data(), sizeof(uint64_t));
-    id = be64toh(id);
-    out << id << " = 0x" << std::hex << id << std::dec << "\n";
-    id = htobe64(id + 1);
-    startKey.assign((char const*)&id, sizeof(uint64_t));
-    rocksdb::Slice sl(startKey);
-    it->Seek(sl);
-  }
-  delete it;
-  delete trx;
-}
-*/
 
-pub(crate) fn get_collection_list(db: &TransactionDB) -> Vec<String> {
-    let cf_handle = db.cf_handle("Documents").unwrap();
+pub(crate) fn get_column_family(db: &DB, name: String) -> Vec<(Box<[u8]>, Box<[u8]>)> {
+    let cf_handle = db.cf_handle(&name).unwrap();
     let mut ropts = ReadOptions::default();
     ropts.set_verify_checksums(false);
     ropts.fill_cache(false);
 
-    let trx = db.transaction();
+    let mut iter = db.raw_iterator_cf(cf_handle);
+    iter.seek_to_first();
 
-    let iter = trx.iterator_cf(cf_handle, IteratorMode::Start);
-    for item in iter {
-        let (key, value) = item.unwrap();
-        println!("key: {:?} value: {:?}", key, value);
+    let mut stuff: Vec<(Box<[u8]>, Box<[u8]>)> = vec![];
+    while iter.valid() {
+        stuff.push((iter.key().unwrap().into(), iter.value().unwrap().into()));
+        iter.next();
     }
-    vec![]
+    stuff
 }
 
-pub(crate) fn open_arangodb_database(path: String) -> Result<TransactionDB, Error> {
+pub(crate) fn open_arangodb_database(path: String) -> Result<DB, Error> {
     let mut cf_opts = Options::default();
     cf_opts.set_max_write_buffer_number(16);
     let cfs: Vec<ColumnFamilyDescriptor> = vec![
@@ -171,7 +141,6 @@ pub(crate) fn open_arangodb_database(path: String) -> Result<TransactionDB, Erro
     let mut db_opts = Options::default();
     db_opts.create_missing_column_families(false);
     db_opts.create_if_missing(false);
-    let mut txdb_opts = TransactionDBOptions::default();
 
-    TransactionDB::open_cf_descriptors(&db_opts, &txdb_opts, path, cfs)
+    DB::open_cf_descriptors(&db_opts, path, cfs)
 }
