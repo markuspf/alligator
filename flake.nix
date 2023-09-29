@@ -40,6 +40,9 @@
             [ pkgs.pkg-config 
               pkgs.openssl 
 	      pkgs.elixir_1_14
+	      pkgs.python310
+	      pkgs.rust-analyzer
+	      pkgs.rustfmt
               (rustVersion.override { extensions = [ "rust-src" ]; }) ];
         };
       });

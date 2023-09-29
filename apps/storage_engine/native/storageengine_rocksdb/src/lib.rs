@@ -6,7 +6,6 @@ use rustler::resource::ResourceArc;
 use rocksdb::DB;
 
 mod arangodb;
-mod brangodb;
 
 pub struct MyDB {
     pub path: String,
