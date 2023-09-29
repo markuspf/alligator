@@ -39,6 +39,7 @@
           buildInputs =
             [ pkgs.pkg-config 
               pkgs.openssl 
+	      pkgs.elixir_1_14
               (rustVersion.override { extensions = [ "rust-src" ]; }) ];
         };
       });
