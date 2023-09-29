@@ -6,9 +6,7 @@ defmodule Tui.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: StorageEngine.Worker.start_link(arg)
-      # {StorageEngine.Worker, arg}
-      {Ratatouille.Runtime.Supervisor, runtime: [app: Tui.ColumnFamilyBrowser]}
+      # {Ratatouille.Runtime.Supervisor, runtime: [app: Tui.ColumnFamilyBrowser]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
