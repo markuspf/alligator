@@ -1,6 +1,9 @@
 defmodule StorageEngine.RocksDB do
   use Rustler, otp_app: :storage_engine, crate: "storageengine_rocksdb"
 
+  alias StorageEngine.RocksDB
+  alias StorageEngine.RocksDB.ColumnFamilies
+
   defstruct [:reference]
   # When your NIF is loaded, it will override this function.
   def open(_path), do: error()
@@ -13,11 +16,19 @@ defmodule StorageEngine.RocksDB do
   end
 
   def read_definitions(%StorageEngine.RocksDB{} = db) do
-    get_column_family(db, "default")
-    |> Enum.map(&StorageEngine.RocksDB.ColumnFamilies.Definitions.parse_entry/1)
+    entries =
+      get_column_family(db, "default")
+      |> Enum.map(&ColumnFamilies.EntryParser.parse_entry/1)
+
+    %ColumnFamilies.Definitions{entries: entries}
   end
 
-  def databases(defs) do
+  def open_test_cf() do
+    db = open_test_db()
+    get_column_family(db, "default")
+  end
+
+  def databases(%ColumnFamilies.Definitions{entries: defs}) do
     defs
     |> Enum.filter(fn v ->
       case v do
@@ -27,7 +38,7 @@ defmodule StorageEngine.RocksDB do
     end)
   end
 
-  def collections(defs) do
+  def collections(%ColumnFamilies.Definitions{entries: defs}) do
     defs
     |> Enum.filter(fn v ->
       case v do
