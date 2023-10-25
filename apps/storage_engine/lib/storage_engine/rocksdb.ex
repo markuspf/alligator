@@ -1,6 +1,8 @@
 defmodule StorageEngine.RocksDB do
   use Rustler, otp_app: :storage_engine, crate: "storageengine_rocksdb"
 
+  alias ArangoDB.Database
+  alias ArangoDB.Collection
   alias StorageEngine.RocksDB
   alias StorageEngine.RocksDB.ColumnFamilies
 
@@ -28,6 +30,17 @@ defmodule StorageEngine.RocksDB do
     get_column_family(db, "default")
   end
 
+  def open_test_docs() do
+    db = open_test_db()
+    get_column_family(db, "Documents")
+  end
+
+  def fullon() do
+    cf = open_test_docs()
+    {_, v} = Enum.at(cf, 0)
+    VelocyPack.decode(v)
+  end
+
   def databases(%ColumnFamilies.Definitions{entries: defs}) do
     defs
     |> Enum.filter(fn v ->
@@ -40,10 +53,13 @@ defmodule StorageEngine.RocksDB do
 
   def collections(%ColumnFamilies.Definitions{entries: defs}) do
     defs
-    |> Enum.filter(fn v ->
-      case v do
-        %ArangoDB.Collection{} -> true
-        _ -> false
+    |> Enum.reduce(%{}, fn e, acc ->
+      case e do
+        %ArangoDB.Collection{database_id: database_id, spec: %{"name" => name}} ->
+          Map.update(acc, database_id, %{"name" => e}, fn m -> Map.put(m, name, e) end)
+
+        _ ->
+          acc
       end
     end)
   end
