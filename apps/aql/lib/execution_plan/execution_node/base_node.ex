@@ -1,6 +1,4 @@
 defmodule Aql.ExecutionPlan.ExecutionNode.BaseNode do
-  defstruct id: nil, estimated_cost: nil, estimated_nr_items: nil, dependencies: []
-
   @callback parse_details_from_json(json :: any()) :: any()
 
   defmacro __using__(fields) do
