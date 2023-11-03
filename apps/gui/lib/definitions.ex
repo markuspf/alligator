@@ -23,7 +23,7 @@ defmodule Gui.Definitions do
       IO.puts("#{inspect(inst.collections)}")
       IO.puts("keys: #{inspect(Map.keys(inst.collections))}")
 
-      f = Map.get(inst.collections, String.to_integer(id))git
+      f = Map.get(inst.collections, String.to_integer(id))
 
       IO.puts("wat: #{inspect(f)}")
 
